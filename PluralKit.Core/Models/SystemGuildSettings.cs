@@ -18,5 +18,6 @@
         public MemberId? AutoproxyMember { get; }
 
         public string? ServerTag { get; }
+        public bool TagEnabled { get; }
     }
 }
