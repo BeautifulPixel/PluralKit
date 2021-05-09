@@ -27,7 +27,7 @@ namespace PluralKit.Core
         {
             var tag = ctx.ServerTag ?? ctx.SystemTag;
             if (tag != null)
-              return $"{ServerName ?? DisplayName ?? Name} {ctx.SystemTag}";
+              return $"{ServerName ?? DisplayName ?? Name} {tag}";
             else
               return ServerName ?? DisplayName ?? Name;
         }

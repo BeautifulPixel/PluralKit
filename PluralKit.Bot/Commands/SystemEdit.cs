@@ -165,7 +165,44 @@ namespace PluralKit.Bot
                 await ctx.Reply($"{Emojis.Success} System tag changed. Member names will now end with {newTag.AsCode()} when proxied.");
             }
         }
-        
+
+        public async Task ServerTag(Context ctx)
+        {
+            ctx.CheckSystem();
+            ctx.CheckGuildContext();
+
+            var currentTag = ctx.MessageContext.ServerTag;
+            var globalTag = ctx.MessageContext.SystemTag;
+
+            if (await ctx.MatchClear("your system's server tag"))
+            {
+                var patch = new SystemGuildPatch {ServerTag = null};
+                await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
+                if (globalTag != null)
+                  await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will now end with {globalTag.AsCode()}, your global system tag, when proxied on this server.");
+                else
+                  await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will no longer have a tag when proxied on this server.");
+            } else if (!ctx.HasNext(skipFlags: false))
+            {
+                if (currentTag == null)
+                    await ctx.Reply($"You currently have no server tag. To set one, type `pk;s servertag <tag>`.");
+                else
+                    await ctx.Reply($"Your current server tag is {currentTag.AsCode()}. To change it, type `pk;s servertag <tag>`. To clear it, type `pk;s servertag -clear`.");
+            }
+            else
+            {
+                var newTag = ctx.RemainderOrNull(skipFlags: false);
+                if (newTag != null)
+                    if (newTag.Length > Limits.MaxSystemTagLength)
+                        throw Errors.ServerTagTooLongError(newTag.Length);
+
+                var patch = new SystemGuildPatch {ServerTag = newTag};
+                await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
+
+                await ctx.Reply($"{Emojis.Success} Server tag changed. Member names will now end with {newTag.AsCode()} when proxied on this server.");
+            }
+        }
+
         public async Task Avatar(Context ctx)
         {
             ctx.CheckSystem();
