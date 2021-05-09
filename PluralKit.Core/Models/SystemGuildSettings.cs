@@ -16,5 +16,7 @@
 
         public AutoproxyMode AutoproxyMode { get; } = AutoproxyMode.Off;
         public MemberId? AutoproxyMember { get; }
+
+        public string? ServerTag { get; }
     }
 }
