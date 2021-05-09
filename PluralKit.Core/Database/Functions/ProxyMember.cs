@@ -25,7 +25,8 @@ namespace PluralKit.Core
 
         public string ProxyName(MessageContext ctx)
         {
-            var tag = ctx.ServerTag ?? ctx.SystemTag;
+            var tag = ctx.TagEnabled ? ctx.ServerTag ?? ctx.SystemTag
+                        : null;
             if (tag != null)
               return $"{ServerName ?? DisplayName ?? Name} {tag}";
             else

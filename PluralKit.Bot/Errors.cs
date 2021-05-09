@@ -47,6 +47,9 @@ namespace PluralKit.Bot {
         public static PKError MemberPronounsTooLongError(int length) => new PKError($"Member pronouns too long ({length}/{Limits.MaxMemberNameLength} characters).");
         public static PKError MemberLimitReachedError(int limit) => new PKError($"System has reached the maximum number of members ({limit}). Please delete unused members first in order to create new ones.");
 
+        public static PKError TagAlreadyDisabled => new PKError($"System tag display is already disabled on this server.");
+        public static PKError TagAlreadyEnabled => new PKError($"System tag display is already enabled on this server.");
+
         public static PKError InvalidColorError(string color) => new PKError($"\"{color}\" is not a valid color. Color must be in 6-digit RGB hex format (eg. #ff0000).");
         public static PKError BirthdayParseError(string birthday) => new PKError($"\"{birthday}\" could not be parsed as a valid date. Try a format like \"2016-12-24\" or \"May 3 1996\".");
         public static PKError ProxyMustHaveText => new PKSyntaxError("Example proxy message must contain the string 'text'.");

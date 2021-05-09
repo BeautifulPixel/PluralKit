@@ -18,6 +18,7 @@ namespace PluralKit.Core
         public AutoproxyMode AutoproxyMode { get; }
         public MemberId? AutoproxyMember { get; }
         public string? ServerTag { get; }
+        public bool TagEnabled { get; } = true;
         public ulong? LastMessage { get; }
         public MemberId? LastMessageMember { get; }
         public SwitchId? LastSwitch { get; }

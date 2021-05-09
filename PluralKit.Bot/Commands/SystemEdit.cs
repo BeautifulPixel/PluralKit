@@ -139,6 +139,10 @@ namespace PluralKit.Bot
         {
             ctx.CheckSystem();
 
+            var tagDisabledWarning = (ctx.Guild != null && !ctx.MessageContext.TagEnabled)
+              ? $"\n\n{Emojis.Warn} Please note that tag display is currently disabled on this server; to enable it, type `pk;s severtag -enable`."
+              : "";
+
             if (await ctx.MatchClear("your system's tag"))
             {
                 var patch = new SystemPatch {Tag = null};
@@ -150,7 +154,7 @@ namespace PluralKit.Bot
                 if (ctx.System.Tag == null)
                     await ctx.Reply($"You currently have no system tag. To set one, type `pk;s tag <tag>`.");
                 else
-                    await ctx.Reply($"Your current system tag is {ctx.System.Tag.AsCode()}. To change it, type `pk;s tag <tag>`. To clear it, type `pk;s tag -clear`.");
+                    await ctx.Reply($"Your current system tag is {ctx.System.Tag.AsCode()}. To change it, type `pk;s tag <tag>`. To clear it, type `pk;s tag -clear`.{tagDisabledWarning}");
             }
             else
             {
@@ -162,32 +166,60 @@ namespace PluralKit.Bot
                 var patch = new SystemPatch {Tag = newTag};
                 await _db.Execute(conn => _repo.UpdateSystem(conn, ctx.System.Id, patch));
                 
-                await ctx.Reply($"{Emojis.Success} System tag changed. Member names will now end with {newTag.AsCode()} when proxied.");
+                await ctx.Reply($"{Emojis.Success} System tag changed. Member names will now end with {newTag.AsCode()} when proxied.{tagDisabledWarning}");
             }
         }
 
         public async Task ServerTag(Context ctx)
         {
+            // Check that the user as a system and is using the command in a guild
             ctx.CheckSystem();
             ctx.CheckGuildContext();
 
+            // Get the current state of the user's tags
             var currentTag = ctx.MessageContext.ServerTag;
             var globalTag = ctx.MessageContext.SystemTag;
+            var tagCurrentlyEnabled = ctx.MessageContext.TagEnabled;
 
             if (await ctx.MatchClear("your system's server tag"))
             {
-                var patch = new SystemGuildPatch {ServerTag = null};
+                var patch = new SystemGuildPatch {ServerTag = null, TagEnabled = true};
                 await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
                 if (globalTag != null)
-                  await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will now end with {globalTag.AsCode()}, your global system tag, when proxied on this server.");
+                    await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will now end with {globalTag.AsCode()}, your global system tag, when proxied on this server.");
                 else
-                  await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will no longer have a tag when proxied on this server.");
-            } else if (!ctx.HasNext(skipFlags: false))
+                    await ctx.Reply($"{Emojis.Success} Server tag cleared. Members will no longer have a tag when proxied on this server.");
+            }
+            else if (ctx.MatchFlag("disable", "off")) {
+                if (!tagCurrentlyEnabled)
+                    throw Errors.TagAlreadyDisabled;
+
+              var patch = new SystemGuildPatch {ServerTag = null, TagEnabled = false};
+              await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
+
+              await ctx.Reply($"{Emojis.Success} Tag display disabled. Members will not have a tag when proxied on this server.");
+
+            }
+            else if (ctx.MatchFlag("enable", "on")) {
+              if (tagCurrentlyEnabled)
+                throw Errors.TagAlreadyEnabled;
+
+              var patch = new SystemGuildPatch {TagEnabled = true};
+              await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
+
+              if (globalTag != null)
+                await ctx.Reply($"{Emojis.Success} Tag display enabled. Members will now end with {globalTag.AsCode()}, your global system tag, when proxied on this server.");
+              else
+                await ctx.Reply($"{Emojis.Success} Tag display enabled. However, you do not currently have any tag set. To set a tag globally, type `pk;s tag <tag>`. To set a tag on just this server, `pk;s servertag <tag>`.");
+              }
+            else if (!ctx.HasNext(skipFlags: false))
             {
-                if (currentTag == null)
-                    await ctx.Reply($"You currently have no server tag. To set one, type `pk;s servertag <tag>`.");
+                if (!tagCurrentlyEnabled)
+                    await ctx.Reply($"Tag display is currently disabled on this server. To enable it, type `pk;s servertag -enable`.");
+                else if (currentTag == null)
+                    await ctx.Reply($"You currently have no server tag. To set one, type `pk;s servertag <tag>`. To disable tag display altogether on this server, type `pk;s servertag -disable`.");
                 else
-                    await ctx.Reply($"Your current server tag is {currentTag.AsCode()}. To change it, type `pk;s servertag <tag>`. To clear it, type `pk;s servertag -clear`.");
+                    await ctx.Reply($"Your current server tag is {currentTag.AsCode()}. To change it, type `pk;s servertag <tag>`. To clear it, type `pk;s servertag -clear`. To disable tag display altogether on this server, type `pk;s servertag -disable`.");
             }
             else
             {
@@ -196,7 +228,7 @@ namespace PluralKit.Bot
                     if (newTag.Length > Limits.MaxSystemTagLength)
                         throw Errors.ServerTagTooLongError(newTag.Length);
 
-                var patch = new SystemGuildPatch {ServerTag = newTag};
+                var patch = new SystemGuildPatch {ServerTag = newTag, TagEnabled = true};
                 await _db.Execute(conn => _repo.UpsertSystemGuild(conn, ctx.System.Id, ctx.Guild.Id, patch));
 
                 await ctx.Reply($"{Emojis.Success} Server tag changed. Member names will now end with {newTag.AsCode()} when proxied on this server.");
